@@ -1,0 +1,185 @@
+import { useEffect, useMemo, useState } from "react";
+import { Edit3, FolderPlus, Trash2 } from "lucide-react";
+import api from "../services/api";
+import EmptyState from "../components/EmptyState";
+import LoadingScreen from "../components/LoadingScreen";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+
+const blankProject = { name: "", description: "", memberIds: [] };
+
+export default function Projects() {
+  const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [form, setForm] = useState(blankProject);
+  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { isAdmin, user } = useAuth();
+  const { showToast } = useToast();
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const projectRequest = api.get("/projects");
+      const userRequest = isAdmin ? api.get("/users") : Promise.resolve({ data: { users: [] } });
+      const [projectResponse, userResponse] = await Promise.all([projectRequest, userRequest]);
+      setProjects(projectResponse.data.projects);
+      setUsers(userResponse.data.users);
+    } catch (error) {
+      showToast(error.response?.data?.message || "Could not load projects", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const selectableUsers = useMemo(() => users.filter((member) => member.id !== user?.id), [users, user]);
+
+  function startEdit(project) {
+    setEditingId(project.id);
+    setForm({
+      name: project.name,
+      description: project.description,
+      memberIds: project.members.map((member) => member.userId).filter((id) => id !== user.id)
+    });
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setForm(blankProject);
+  }
+
+  function toggleMember(id) {
+    setForm((current) => ({
+      ...current,
+      memberIds: current.memberIds.includes(id)
+        ? current.memberIds.filter((memberId) => memberId !== id)
+        : [...current.memberIds, id]
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    try {
+      if (editingId) {
+        await api.put(`/projects/${editingId}`, form);
+        showToast("Project updated");
+      } else {
+        await api.post("/projects", form);
+        showToast("Project created");
+      }
+      resetForm();
+      loadData();
+    } catch (error) {
+      showToast(error.response?.data?.message || "Project save failed", "error");
+    }
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Delete this project and all of its tasks?")) return;
+    try {
+      await api.delete(`/projects/${id}`);
+      showToast("Project deleted");
+      loadData();
+    } catch (error) {
+      showToast(error.response?.data?.message || "Project delete failed", "error");
+    }
+  }
+
+  if (loading) {
+    return <LoadingScreen label="Loading projects..." />;
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <section className="space-y-5">
+        <div>
+          <h2 className="text-2xl font-bold text-ink">Projects</h2>
+          <p className="text-sm text-slate-500">Create projects, manage members, and track task volume.</p>
+        </div>
+
+        {projects.length ? (
+          <div className="grid gap-4">
+            {projects.map((project) => (
+              <article key={project.id} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-ink">{project.name}</h3>
+                    <p className="mt-1 text-sm text-slate-500">{project.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {project.members.map((member) => (
+                        <span key={member.id} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          {member.user.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-brand">
+                      {project.tasks.length} tasks
+                    </span>
+                    {isAdmin && (
+                      <>
+                        <button className="focus-ring rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-100" onClick={() => startEdit(project)} aria-label="Edit project">
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button className="focus-ring rounded-md border border-slate-200 p-2 text-red-500 hover:bg-red-50" onClick={() => handleDelete(project.id)} aria-label="Delete project">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No projects yet" message="Admins can create the first project and add members here." />
+        )}
+      </section>
+
+      {isAdmin && (
+        <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <FolderPlus className="h-5 w-5 text-brand" />
+            <h3 className="font-bold text-ink">{editingId ? "Edit project" : "New project"}</h3>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Name</span>
+              <input className="focus-ring mt-1 w-full rounded-md border border-slate-300 px-3 py-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">Description</span>
+              <textarea className="focus-ring mt-1 min-h-24 w-full rounded-md border border-slate-300 px-3 py-2" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} required />
+            </label>
+            <div>
+              <span className="text-sm font-semibold text-slate-700">Members</span>
+              <div className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 p-3">
+                {selectableUsers.length ? selectableUsers.map((member) => (
+                  <label key={member.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={form.memberIds.includes(member.id)} onChange={() => toggleMember(member.id)} />
+                    {member.name}
+                  </label>
+                )) : <p className="text-sm text-slate-500">No other members yet.</p>}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button className="focus-ring flex-1 rounded-md bg-brand px-4 py-2.5 font-semibold text-white hover:bg-blue-700">
+                {editingId ? "Update" : "Create"}
+              </button>
+              {editingId && (
+                <button type="button" onClick={resetForm} className="focus-ring rounded-md border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-100">
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </aside>
+      )}
+    </div>
+  );
+}

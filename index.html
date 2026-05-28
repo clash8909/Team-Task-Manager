@@ -1,0 +1,191 @@
+# Team Task Manager
+
+A beginner-friendly full stack team task manager built with React, Vite, Tailwind CSS, Express, JWT authentication, bcryptjs, Prisma ORM, and SQLite. It includes role-based access for admins and members, project management, task assignment, dashboard stats, search, filters, loading states, toast notifications, and a responsive sidebar layout.
+
+## Features
+
+- Signup, login, logout, persistent JWT auth, and protected routes
+- Password hashing with bcryptjs
+- Role-based access control for `ADMIN` and `MEMBER`
+- Admin project CRUD with project members
+- Admin task CRUD with assignee, due date, priority, and status
+- Members can view assigned tasks and update status
+- Dashboard cards for total, completed, pending, and overdue tasks
+- Project-wise task statistics
+- Task search and status filter
+- Empty states, loading states, responsive layout, status badges, and toast notifications
+- SQLite database through Prisma ORM
+- Railway-ready root install, build, migration, and start scripts
+
+## Tech Stack
+
+- Frontend: React, Vite, Tailwind CSS, Axios, React Router, Lucide React
+- Backend: Node.js, Express.js, JWT, bcryptjs, Zod validation
+- Database: SQLite with Prisma ORM
+
+## Folder Structure
+
+```txt
+team-task-manager/
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── pages/
+│   │   └── services/
+│   ├── index.html
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── server/
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   ├── utils/
+│   │   ├── app.js
+│   │   └── index.js
+│   └── package.json
+├── prisma/
+│   ├── migrations/
+│   ├── schema.prisma
+│   └── seed.js
+├── .env
+├── .env.example
+├── package.json
+├── railway.json
+└── README.md
+```
+
+## Local Setup
+
+From the project folder:
+
+```bash
+npm install
+npm start
+```
+
+Then open:
+
+```txt
+http://localhost:5000
+```
+
+The root `npm start` command runs Prisma migrations, builds the React app, and starts the Express server that serves both `/api` and the built frontend.
+
+For development with Vite hot reload and the API server:
+
+```bash
+npm run dev
+```
+
+Frontend: `http://localhost:5173`  
+Backend: `http://localhost:5000`
+
+## Environment Variables
+
+Copy `.env.example` to `.env` for new environments and set:
+
+```env
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="use-a-long-random-secret"
+JWT_EXPIRES_IN="7d"
+PORT=5000
+NODE_ENV="production"
+CLIENT_URL="http://localhost:5173"
+```
+
+For Railway, set a strong `JWT_SECRET`. If you keep SQLite, attach a Railway volume and point `DATABASE_URL` to a file path on that volume, for example:
+
+```env
+DATABASE_URL="file:/data/prod.db"
+```
+
+## Demo Seed
+
+Optional sample data:
+
+```bash
+npm run db:seed
+```
+
+Seed users:
+
+```txt
+admin@example.com / Admin123!
+member@example.com / Member123!
+```
+
+## API Overview
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/users`
+- `GET /api/projects`
+- `POST /api/projects`
+- `PUT /api/projects/:id`
+- `DELETE /api/projects/:id`
+- `GET /api/tasks`
+- `GET /api/tasks/dashboard`
+- `POST /api/tasks`
+- `PUT /api/tasks/:id`
+- `PATCH /api/tasks/:id/status`
+- `DELETE /api/tasks/:id`
+
+## Railway Deployment
+
+1. Push this project to GitHub.
+2. Create a new Railway project and select the GitHub repo.
+3. Add a Railway volume for SQLite persistence.
+4. Set environment variables:
+
+```env
+DATABASE_URL="file:/data/prod.db"
+JWT_SECRET="your-long-production-secret"
+JWT_EXPIRES_IN="7d"
+NODE_ENV="production"
+```
+
+5. Railway will use `railway.json`.
+
+Build command:
+
+```bash
+npm install --include=dev && npm run build && npm run db:generate
+```
+
+Start command:
+
+```bash
+npm start
+```
+
+## GitHub Upload
+
+```bash
+git init
+git add .
+git commit -m "Initial team task manager app"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/team-task-manager.git
+git push -u origin main
+```
+
+## Screenshot Placeholders
+
+Add screenshots after running the app:
+
+- `screenshots/login.png`
+- `screenshots/dashboard.png`
+- `screenshots/projects.png`
+- `screenshots/tasks.png`
+
+## Notes
+
+- This project intentionally uses SQLite and Prisma only. It does not use MongoDB.
+- Change the default local `JWT_SECRET` before deploying.
+- Admin users can create projects and tasks. Member users can view assigned work and update status.
